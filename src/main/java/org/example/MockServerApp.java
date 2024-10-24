@@ -10,6 +10,7 @@ import java.util.Map;
 
 import static org.mockserver.model.HttpRequest.request;
 import static org.mockserver.model.HttpResponse.response;
+import static org.mockserver.model.Parameter.param;
 
 public class MockServerApp {
     private static ClientAndServer mockServer;
@@ -25,15 +26,25 @@ public class MockServerApp {
     private static void setupExpectations() {
         mockServer
                 .when(
-                        request()
-                                .withMethod("GET")
-                                .withPath("/api/example")
+                    request()
+                        .withMethod("GET")
+                        .withPath("/api/example/{key}")
+                        .withPathParameters(param("key", "[a-zA-Z0-9\\-]+"))
                 )
-                .respond(
-                        response()
-                                .withStatusCode(200)
-                                .withBody("{\"message\": \"Hello, Mock Server!\"}")
-                                .withHeader("Content-Type", "application/json")
+                .respond(request -> {
+                        String key = request.getFirstPathParameter("key");
+                        String value = memory.get(key);
+                        if (value != null) {
+                            return response()
+                                    .withStatusCode(200)
+                                    .withBody("Found: " + key + ":" + value);
+                        } else {
+                            return response()
+                                    .withStatusCode(404)
+                                    .withReasonPhrase("Not Found")
+                                    .withBody("Did not find value for " + key);
+                        }
+                    }
                 );
 
         mockServer
